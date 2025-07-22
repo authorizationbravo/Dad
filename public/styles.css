@@ -1,4 +1,3 @@
-
 * {
     margin: 0;
     padding: 0;
@@ -19,6 +18,189 @@ html, body {
     flex-direction: column;
     height: 100vh;
     background: #1e1e1e;
+    color: #d4d4d4;
+    font-family: 'Inter', sans-serif;
+    position: relative;
+}
+
+/* Tools Sidebar */
+.tools-sidebar {
+    position: fixed;
+    top: 60px;
+    right: -350px;
+    width: 350px;
+    height: calc(100vh - 60px);
+    background: #252526;
+    border-left: 1px solid #3e3e42;
+    z-index: 1000;
+    transition: right 0.3s ease;
+    overflow-y: auto;
+}
+
+.tools-sidebar.show {
+    right: 0;
+}
+
+.tools-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 50px;
+    background: #2d2d30;
+    border-bottom: 1px solid #3e3e42;
+    padding: 0 20px;
+}
+
+.tools-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #cccccc;
+    margin: 0;
+}
+
+.tools-content {
+    padding: 20px;
+}
+
+.tool-section {
+    margin-bottom: 20px;
+    border: 1px solid #3e3e42;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.tool-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    background: #2d2d30;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.tool-section-header:hover {
+    background: #353537;
+}
+
+.tool-section-header i:last-child {
+    margin-left: auto;
+    transition: transform 0.2s ease;
+}
+
+.tool-section.expanded .tool-section-header i:last-child {
+    transform: rotate(90deg);
+}
+
+.tool-section-content {
+    padding: 15px;
+    background: #1e1e1e;
+    display: none;
+}
+
+.tool-section.expanded .tool-section-content {
+    display: block;
+}
+
+.secrets-list {
+    margin-bottom: 15px;
+}
+
+.secret-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    background: #2d2d30;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.secret-key {
+    font-family: 'Courier New', monospace;
+    color: #569cd6;
+}
+
+.secret-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.integration-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: #2d2d30;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.integration-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.integration-status {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: #dc3545;
+    color: white;
+}
+
+.integration-status.connected {
+    background: #28a745;
+}
+
+.deployment-status {
+    margin-top: 10px;
+    padding: 10px;
+    background: #2d2d30;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #888;
+}
+
+.form-group {
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #cccccc;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    background: #3c3c3c;
+    border: 1px solid #4a4a4a;
+    border-radius: 4px;
+    color: #d4d4d4;
+    font-size: 0.9rem;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #0969aa;
+    box-shadow: 0 0 0 2px rgba(9, 105, 170, 0.2);
+}
+
+.toggle-password {
+    position: absolute;
+    right: 10px;
+    top: 32px;
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 5px;
 }
 
 /* Header */
@@ -526,7 +708,7 @@ html, body {
     .panel-left {
         width: 250px;
     }
-    
+
     .panel-right {
         width: 350px;
     }
@@ -536,13 +718,13 @@ html, body {
     .ide-body {
         flex-direction: column;
     }
-    
+
     .panel-left, .panel-right {
         width: 100%;
         height: 200px;
         resize: vertical;
     }
-    
+
     .panel-center {
         order: -1;
     }

@@ -82,6 +82,16 @@ app.get('/api/bills/:id', (req, res) => {
   res.json(bill);
 });
 
+// Secrets management endpoint
+app.get('/api/integrations/status', (req, res) => {
+  const status = {
+    openai: !!process.env.OPENAI_API_KEY,
+    anthropic: !!process.env.ANTHROPIC_API_KEY,
+    groq: !!process.env.GROQ_API_KEY
+  };
+  res.json(status);
+});
+
 // AI Chat endpoint
 app.post('/api/chat', async (req, res) => {
   try {

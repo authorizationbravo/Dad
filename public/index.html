@@ -26,6 +26,12 @@
                 </button>
             </div>
             <div class="header-right">
+                <button class="btn-icon" id="downloadBtn" title="Download Project">
+                    <i class="fas fa-download"></i>
+                </button>
+                <button class="btn-icon" id="toolsBtn" title="Tools">
+                    <i class="fas fa-toolbox"></i>
+                </button>
                 <button class="btn-icon" title="Settings">
                     <i class="fas fa-cog"></i>
                 </button>
@@ -34,6 +40,80 @@
                 </button>
             </div>
         </header>
+
+        <!-- Tools Sidebar -->
+        <div class="tools-sidebar" id="toolsSidebar">
+            <div class="tools-header">
+                <h3>Tools</h3>
+                <button class="btn-icon" id="closeToolsBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="tools-content">
+                <div class="tool-section">
+                    <div class="tool-section-header" onclick="ideApp.toggleToolSection('secrets')">
+                        <i class="fas fa-key"></i>
+                        <span>Secrets</span>
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                    <div class="tool-section-content" id="secrets-content">
+                        <div class="secrets-list" id="secretsList">
+                            <!-- Secrets will be populated here -->
+                        </div>
+                        <button class="btn btn-primary" id="addSecretBtn">
+                            <i class="fas fa-plus"></i> Add Secret
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="tool-section">
+                    <div class="tool-section-header" onclick="ideApp.toggleToolSection('integrations')">
+                        <i class="fas fa-plug"></i>
+                        <span>Integrations</span>
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                    <div class="tool-section-content" id="integrations-content">
+                        <div class="integration-item">
+                            <div class="integration-info">
+                                <i class="fab fa-openai"></i>
+                                <span>OpenAI</span>
+                            </div>
+                            <div class="integration-status" id="openai-status">Not Connected</div>
+                        </div>
+                        <div class="integration-item">
+                            <div class="integration-info">
+                                <i class="fas fa-robot"></i>
+                                <span>Anthropic</span>
+                            </div>
+                            <div class="integration-status" id="anthropic-status">Not Connected</div>
+                        </div>
+                        <div class="integration-item">
+                            <div class="integration-info">
+                                <i class="fas fa-bolt"></i>
+                                <span>Groq</span>
+                            </div>
+                            <div class="integration-status" id="groq-status">Not Connected</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tool-section">
+                    <div class="tool-section-header" onclick="ideApp.toggleToolSection('deployment')">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <span>Deployment</span>
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                    <div class="tool-section-content" id="deployment-content">
+                        <button class="btn btn-primary" id="deployBtn">
+                            <i class="fas fa-rocket"></i> Deploy to Replit
+                        </button>
+                        <div class="deployment-status" id="deploymentStatus">
+                            Ready to deploy
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Main IDE Content -->
         <div class="ide-body">
@@ -135,6 +215,34 @@
     </div>
 
     <!-- Modals -->
+    <div class="modal" id="secretModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="secretModalTitle">Add Secret</h3>
+                <button class="close-btn" id="closeSecretModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="secretKey">Secret Key</label>
+                    <input type="text" id="secretKey" placeholder="e.g., OPENAI_API_KEY">
+                </div>
+                <div class="form-group">
+                    <label for="secretValue">Secret Value</label>
+                    <input type="password" id="secretValue" placeholder="Enter secret value">
+                    <button type="button" class="toggle-password" id="toggleSecretValue">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-primary" id="saveSecretBtn">Save</button>
+                    <button class="btn btn-secondary" id="cancelSecretBtn">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal" id="newFileModal">
         <div class="modal-content">
             <div class="modal-header">

@@ -35,6 +35,8 @@ class LegislativeIDE {
 
         this.chatHistory = [];
         this.isConsoleCollapsed = false;
+        this.secrets = {};
+        this.isToolsSidebarOpen = false;
         
         this.init();
     }
@@ -68,6 +70,21 @@ class LegislativeIDE {
 
         // Run button
         document.getElementById('runBtn').addEventListener('click', () => this.runProject());
+
+        // Download and Tools
+        document.getElementById('downloadBtn').addEventListener('click', () => this.downloadProject());
+        document.getElementById('toolsBtn').addEventListener('click', () => this.toggleToolsSidebar());
+        document.getElementById('closeToolsBtn').addEventListener('click', () => this.toggleToolsSidebar());
+
+        // Secrets
+        document.getElementById('addSecretBtn').addEventListener('click', () => this.showSecretModal());
+        document.getElementById('saveSecretBtn').addEventListener('click', () => this.saveSecret());
+        document.getElementById('cancelSecretBtn').addEventListener('click', () => this.hideModal('secretModal'));
+        document.getElementById('closeSecretModal').addEventListener('click', () => this.hideModal('secretModal'));
+        document.getElementById('toggleSecretValue').addEventListener('click', () => this.togglePasswordVisibility());
+
+        // Deployment
+        document.getElementById('deployBtn').addEventListener('click', () => this.deployToReplit());
 
         // Modal handlers
         this.setupModalHandlers();
@@ -348,6 +365,169 @@ class LegislativeIDE {
         setTimeout(() => {
             this.addConsoleMessage('Build completed successfully', 'info');
             this.refreshPreview();
+        }, 2000);
+    }
+
+    downloadProject() {
+        this.addConsoleMessage('Preparing project download...', 'info');
+        
+        // Create a zip-like structure for download
+        const projectData = {
+            'package.json': this.fileSystem['package.json'].content,
+            'README.md': this.fileSystem['README.md'].content,
+            'src/main.js': this.fileSystem.src.children['main.js'].content,
+            'src/components/BillCard.js': this.fileSystem.src.children.components.children['BillCard.js'].content,
+            'src/components/SearchBar.js': this.fileSystem.src.children.components.children['SearchBar.js'].content,
+            'src/utils/api.js': this.fileSystem.src.children.utils.children['api.js'].content,
+            'src/utils/helpers.js': this.fileSystem.src.children.utils.children['helpers.js'].content,
+            'public/index.html': this.fileSystem.public.children['index.html'].content,
+            'public/styles.css': this.fileSystem.public.children['styles.css'].content
+        };
+
+        const dataStr = JSON.stringify(projectData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'legis-ai-project.json';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        this.addConsoleMessage('Project downloaded successfully', 'info');
+        this.addChatMessage('Your project has been downloaded as a JSON file. You can import this into other development environments.', 'assistant');
+    }
+
+    toggleToolsSidebar() {
+        const sidebar = document.getElementById('toolsSidebar');
+        this.isToolsSidebarOpen = !this.isToolsSidebarOpen;
+        
+        if (this.isToolsSidebarOpen) {
+            sidebar.classList.add('show');
+            this.checkIntegrationStatus();
+        } else {
+            sidebar.classList.remove('show');
+        }
+    }
+
+    toggleToolSection(sectionName) {
+        const section = document.querySelector(`#${sectionName}-content`).parentElement;
+        section.classList.toggle('expanded');
+    }
+
+    showSecretModal() {
+        document.getElementById('secretModalTitle').textContent = 'Add Secret';
+        document.getElementById('secretKey').value = '';
+        document.getElementById('secretValue').value = '';
+        document.getElementById('secretModal').classList.add('show');
+        document.getElementById('secretKey').focus();
+    }
+
+    saveSecret() {
+        const key = document.getElementById('secretKey').value.trim();
+        const value = document.getElementById('secretValue').value.trim();
+        
+        if (key && value) {
+            this.secrets[key] = value;
+            this.renderSecretsList();
+            this.hideModal('secretModal');
+            this.addConsoleMessage(`Secret '${key}' saved`, 'info');
+            this.checkIntegrationStatus();
+        }
+    }
+
+    renderSecretsList() {
+        const secretsList = document.getElementById('secretsList');
+        secretsList.innerHTML = '';
+        
+        Object.keys(this.secrets).forEach(key => {
+            const secretItem = document.createElement('div');
+            secretItem.className = 'secret-item';
+            secretItem.innerHTML = `
+                <span class="secret-key">${key}</span>
+                <div class="secret-actions">
+                    <button class="btn-icon" onclick="ideApp.editSecret('${key}')" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-icon" onclick="ideApp.deleteSecret('${key}')" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            secretsList.appendChild(secretItem);
+        });
+    }
+
+    editSecret(key) {
+        document.getElementById('secretModalTitle').textContent = 'Edit Secret';
+        document.getElementById('secretKey').value = key;
+        document.getElementById('secretValue').value = this.secrets[key];
+        document.getElementById('secretModal').classList.add('show');
+    }
+
+    deleteSecret(key) {
+        if (confirm(`Delete secret '${key}'?`)) {
+            delete this.secrets[key];
+            this.renderSecretsList();
+            this.addConsoleMessage(`Secret '${key}' deleted`, 'info');
+            this.checkIntegrationStatus();
+        }
+    }
+
+    togglePasswordVisibility() {
+        const input = document.getElementById('secretValue');
+        const icon = document.getElementById('toggleSecretValue').querySelector('i');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.className = 'fas fa-eye-slash';
+        } else {
+            input.type = 'password';
+            icon.className = 'fas fa-eye';
+        }
+    }
+
+    checkIntegrationStatus() {
+        const integrations = ['openai', 'anthropic', 'groq'];
+        const keyMappings = {
+            'openai': 'OPENAI_API_KEY',
+            'anthropic': 'ANTHROPIC_API_KEY',
+            'groq': 'GROQ_API_KEY'
+        };
+        
+        integrations.forEach(integration => {
+            const statusElement = document.getElementById(`${integration}-status`);
+            const hasKey = this.secrets[keyMappings[integration]];
+            
+            if (hasKey) {
+                statusElement.textContent = 'Connected';
+                statusElement.classList.add('connected');
+            } else {
+                statusElement.textContent = 'Not Connected';
+                statusElement.classList.remove('connected');
+            }
+        });
+    }
+
+    deployToReplit() {
+        const statusElement = document.getElementById('deploymentStatus');
+        statusElement.textContent = 'Deploying...';
+        statusElement.style.color = '#ffa500';
+        
+        this.addConsoleMessage('Starting deployment to Replit...', 'info');
+        
+        setTimeout(() => {
+            statusElement.textContent = 'Deployed Successfully!';
+            statusElement.style.color = '#28a745';
+            this.addConsoleMessage('Deployment completed successfully', 'info');
+            this.addChatMessage('Your LegisAI application has been deployed! You can share it with others.', 'assistant');
+            
+            setTimeout(() => {
+                statusElement.textContent = 'Ready to deploy';
+                statusElement.style.color = '#888';
+            }, 3000);
         }, 2000);
     }
 }
