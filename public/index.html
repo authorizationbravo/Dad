@@ -1,0 +1,73 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legislative Knowledge Base</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+            <div class="container">
+                <div class="logo">
+                    <i class="fas fa-balance-scale"></i>
+                    <h1>LegisAI</h1>
+                </div>
+                <nav class="nav">
+                    <a href="#" class="nav-link active">Bills</a>
+                    <a href="#" class="nav-link">Analytics</a>
+                    <a href="#" class="nav-link">About</a>
+                </nav>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="container">
+                <div class="hero">
+                    <h2>AI-Interpreted Legislative Knowledge Base</h2>
+                    <p>Understand complex legislation through AI-powered analysis and interpretation</p>
+                </div>
+
+                <div class="search-section">
+                    <div class="search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" placeholder="Search bills, topics, or keywords...">
+                    </div>
+                    <div class="filter-tags" id="filterTags">
+                        <span class="tag active" data-tag="">All</span>
+                        <span class="tag" data-tag="environment">Environment</span>
+                        <span class="tag" data-tag="healthcare">Healthcare</span>
+                        <span class="tag" data-tag="technology">Technology</span>
+                        <span class="tag" data-tag="economy">Economy</span>
+                    </div>
+                </div>
+
+                <div class="bills-grid" id="billsGrid">
+                    <!-- Bills will be populated by JavaScript -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Bill Detail Modal -->
+        <div class="modal" id="billModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle"></h3>
+                    <button class="close-btn" id="closeModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <!-- Bill details will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
