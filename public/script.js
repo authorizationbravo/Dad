@@ -42,8 +42,16 @@ class LegislativeIDE {
     }
 
     init() {
+        this.currentFile = null;
+        this.currentTab = 'editor';
+        this.terminalHistory = [];
+        this.terminalHistoryIndex = -1;
+        
         this.renderFileTree();
         this.setupEventListeners();
+        this.setupTabSystem();
+        this.setupEditor();
+        this.setupTerminal();
         this.updatePreview();
         this.addConsoleMessage('Server started on port 3000', 'info');
     }
@@ -85,6 +93,40 @@ class LegislativeIDE {
 
         // Deployment
         document.getElementById('deployBtn').addEventListener('click', () => this.deployToReplit());
+
+        // Editor controls
+        document.getElementById('saveFileBtn').addEventListener('click', () => this.saveCurrentFile());
+        document.getElementById('formatCodeBtn').addEventListener('click', () => this.formatCode());
+        document.getElementById('searchBtn').addEventListener('click', () => this.showSearch());
+
+        // Terminal
+        document.getElementById('terminalInput').addEventListener('keydown', (e) => this.handleTerminalInput(e));
+        document.getElementById('newTerminalBtn').addEventListener('click', () => this.newTerminal());
+
+        // Git commands
+        document.getElementById('commitBtn').addEventListener('click', () => this.commitChanges());
+        document.getElementById('pushBtn').addEventListener('click', () => this.pushChanges());
+        document.getElementById('pullBtn').addEventListener('click', () => this.pullChanges());
+
+        // Code editor shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 's':
+                        e.preventDefault();
+                        this.saveCurrentFile();
+                        break;
+                    case 'f':
+                        e.preventDefault();
+                        this.showSearch();
+                        break;
+                    case 'n':
+                        e.preventDefault();
+                        this.showNewFileModal();
+                        break;
+                }
+            }
+        });
 
         // Modal handlers
         this.setupModalHandlers();
@@ -529,6 +571,344 @@ class LegislativeIDE {
                 statusElement.style.color = '#888';
             }, 3000);
         }, 2000);
+    }
+
+    setupTabSystem() {
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.getAttribute('data-tab');
+                this.switchTab(tabName);
+            });
+        });
+    }
+
+    switchTab(tabName) {
+        // Remove active class from all tabs and content
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        // Add active class to selected tab and content
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        document.getElementById(`${tabName}-content`).classList.add('active');
+        
+        this.currentTab = tabName;
+        
+        if (tabName === 'terminal') {
+            document.getElementById('terminalInput').focus();
+        }
+    }
+
+    closeTab(tabName) {
+        if (tabName !== 'assistant') { // Don't close the assistant tab
+            this.switchTab('assistant');
+        }
+    }
+
+    setupEditor() {
+        const editor = document.getElementById('codeEditor');
+        
+        editor.addEventListener('input', () => {
+            this.updateEditorStatus();
+            this.highlightSyntax();
+        });
+        
+        editor.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = e.target.selectionStart;
+                const end = e.target.selectionEnd;
+                e.target.value = e.target.value.substring(0, start) + '  ' + e.target.value.substring(end);
+                e.target.selectionStart = e.target.selectionEnd = start + 2;
+            }
+        });
+        
+        editor.addEventListener('scroll', () => {
+            this.updateMinimap();
+        });
+    }
+
+    openFile(path) {
+        // Remove active class from all file items
+        document.querySelectorAll('.file-item').forEach(item => item.classList.remove('active'));
+        
+        // Add active class to clicked file
+        event.target.closest('.file-item').classList.add('active');
+        
+        this.currentFile = path;
+        this.switchTab('editor');
+        
+        // Load file content
+        const fileContent = this.getFileContent(path);
+        document.getElementById('codeEditor').value = fileContent;
+        document.getElementById('editorBreadcrumb').textContent = path;
+        
+        // Update language based on file extension
+        const ext = path.split('.').pop().toLowerCase();
+        const language = this.getLanguageFromExtension(ext);
+        document.getElementById('editorLanguage').textContent = language;
+        
+        this.updateEditorStatus();
+        this.addConsoleMessage(`Opened file: ${path}`, 'info');
+    }
+
+    getFileContent(path) {
+        // Navigate through file system to get content
+        const parts = path.split('/');
+        let current = this.fileSystem;
+        
+        for (const part of parts) {
+            if (current[part]) {
+                current = current[part];
+                if (current.type === 'folder') {
+                    current = current.children;
+                }
+            }
+        }
+        
+        return current?.content || `// Content of ${path}\n// This would contain the actual file content in a real IDE`;
+    }
+
+    getLanguageFromExtension(ext) {
+        const languageMap = {
+            'js': 'JavaScript',
+            'ts': 'TypeScript',
+            'jsx': 'React JSX',
+            'tsx': 'React TSX',
+            'html': 'HTML',
+            'css': 'CSS',
+            'json': 'JSON',
+            'md': 'Markdown',
+            'py': 'Python',
+            'java': 'Java',
+            'cpp': 'C++',
+            'c': 'C'
+        };
+        return languageMap[ext] || 'Plain Text';
+    }
+
+    updateEditorStatus() {
+        const editor = document.getElementById('codeEditor');
+        const lines = editor.value.split('\n');
+        const cursorPosition = editor.selectionStart;
+        const textBeforeCursor = editor.value.substring(0, cursorPosition);
+        const line = textBeforeCursor.split('\n').length;
+        const col = textBeforeCursor.split('\n').pop().length + 1;
+        
+        document.getElementById('editorPosition').textContent = `Ln ${line}, Col ${col}`;
+    }
+
+    saveCurrentFile() {
+        if (this.currentFile) {
+            const content = document.getElementById('codeEditor').value;
+            this.updateFileContent(this.currentFile, content);
+            this.addConsoleMessage(`Saved: ${this.currentFile}`, 'info');
+            this.addChatMessage(`File ${this.currentFile} has been saved successfully.`, 'assistant');
+        } else {
+            this.addConsoleMessage('No file selected to save', 'warning');
+        }
+    }
+
+    updateFileContent(path, content) {
+        // Update file system with new content
+        const parts = path.split('/');
+        let current = this.fileSystem;
+        
+        for (let i = 0; i < parts.length - 1; i++) {
+            if (current[parts[i]]) {
+                current = current[parts[i]];
+                if (current.type === 'folder') {
+                    current = current.children;
+                }
+            }
+        }
+        
+        const fileName = parts[parts.length - 1];
+        if (current[fileName]) {
+            current[fileName].content = content;
+        }
+    }
+
+    formatCode() {
+        if (this.currentFile) {
+            this.addConsoleMessage('Formatting code...', 'info');
+            // Simulate code formatting
+            setTimeout(() => {
+                this.addConsoleMessage('Code formatted successfully', 'info');
+            }, 500);
+        }
+    }
+
+    showSearch() {
+        if (this.currentTab === 'editor') {
+            const searchTerm = prompt('Search for:');
+            if (searchTerm) {
+                const editor = document.getElementById('codeEditor');
+                const content = editor.value;
+                const index = content.toLowerCase().indexOf(searchTerm.toLowerCase());
+                
+                if (index !== -1) {
+                    editor.focus();
+                    editor.setSelectionRange(index, index + searchTerm.length);
+                    this.addConsoleMessage(`Found "${searchTerm}"`, 'info');
+                } else {
+                    this.addConsoleMessage(`"${searchTerm}" not found`, 'warning');
+                }
+            }
+        }
+    }
+
+    setupTerminal() {
+        const terminalInput = document.getElementById('terminalInput');
+        
+        terminalInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                this.executeTerminalCommand(e.target.value);
+                e.target.value = '';
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (this.terminalHistoryIndex > 0) {
+                    this.terminalHistoryIndex--;
+                    e.target.value = this.terminalHistory[this.terminalHistoryIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (this.terminalHistoryIndex < this.terminalHistory.length - 1) {
+                    this.terminalHistoryIndex++;
+                    e.target.value = this.terminalHistory[this.terminalHistoryIndex];
+                } else {
+                    this.terminalHistoryIndex = this.terminalHistory.length;
+                    e.target.value = '';
+                }
+            }
+        });
+    }
+
+    executeTerminalCommand(command) {
+        if (!command.trim()) return;
+        
+        this.terminalHistory.push(command);
+        this.terminalHistoryIndex = this.terminalHistory.length;
+        
+        // Add command to terminal output
+        this.addTerminalLine(`user@legis-ai:~$ ${command}`);
+        
+        // Simulate command execution
+        setTimeout(() => {
+            this.simulateCommandOutput(command);
+        }, 100);
+    }
+
+    addTerminalLine(text, className = '') {
+        const terminalOutput = document.getElementById('terminalOutput');
+        const line = document.createElement('div');
+        line.className = `terminal-line ${className}`;
+        line.textContent = text;
+        terminalOutput.appendChild(line);
+        terminalOutput.scrollTop = terminalOutput.scrollHeight;
+    }
+
+    simulateCommandOutput(command) {
+        const parts = command.split(' ');
+        const cmd = parts[0];
+        
+        switch(cmd) {
+            case 'ls':
+                this.addTerminalLine('index.ts  package.json  public/  README.md');
+                break;
+            case 'pwd':
+                this.addTerminalLine('/home/user/legis-ai');
+                break;
+            case 'npm':
+                if (parts[1] === 'install') {
+                    this.addTerminalLine('Installing packages...');
+                    setTimeout(() => {
+                        this.addTerminalLine('✓ Packages installed successfully');
+                    }, 1500);
+                    return;
+                } else if (parts[1] === 'run') {
+                    this.addTerminalLine('Running script...');
+                    setTimeout(() => {
+                        this.addTerminalLine('Server started on port 3000');
+                    }, 1000);
+                    return;
+                }
+                this.addTerminalLine('npm <command>');
+                break;
+            case 'git':
+                if (parts[1] === 'status') {
+                    this.addTerminalLine('On branch main');
+                    this.addTerminalLine('Changes not staged for commit:');
+                    this.addTerminalLine('  modified:   index.ts');
+                } else if (parts[1] === 'add') {
+                    this.addTerminalLine('Changes staged for commit');
+                } else {
+                    this.addTerminalLine('git <command>');
+                }
+                break;
+            case 'clear':
+                document.getElementById('terminalOutput').innerHTML = '';
+                return;
+            case 'help':
+                this.addTerminalLine('Available commands: ls, pwd, npm, git, clear, help');
+                break;
+            default:
+                this.addTerminalLine(`bash: ${cmd}: command not found`);
+        }
+        
+        // Add prompt for next command
+        this.addTerminalLine('', 'terminal-prompt-line');
+    }
+
+    newTerminal() {
+        this.addTerminalLine('--- New Terminal Session ---');
+        this.addConsoleMessage('New terminal session started', 'info');
+    }
+
+    commitChanges() {
+        const message = document.getElementById('commitMessage').value.trim();
+        if (message) {
+            this.addConsoleMessage(`Committing changes: "${message}"`, 'info');
+            this.addTerminalLine(`git commit -m "${message}"`);
+            setTimeout(() => {
+                this.addTerminalLine('✓ Changes committed successfully');
+                document.getElementById('commitMessage').value = '';
+            }, 500);
+        } else {
+            this.addConsoleMessage('Please enter a commit message', 'warning');
+        }
+    }
+
+    pushChanges() {
+        this.addConsoleMessage('Pushing changes to remote repository...', 'info');
+        this.addTerminalLine('git push origin main');
+        setTimeout(() => {
+            this.addTerminalLine('✓ Changes pushed successfully');
+        }, 1500);
+    }
+
+    pullChanges() {
+        this.addConsoleMessage('Pulling changes from remote repository...', 'info');
+        this.addTerminalLine('git pull origin main');
+        setTimeout(() => {
+            this.addTerminalLine('✓ Repository up to date');
+        }, 1000);
+    }
+
+    highlightSyntax() {
+        // Basic syntax highlighting would go here
+        // In a real IDE, this would use a proper syntax highlighter
+    }
+
+    updateMinimap() {
+        const editor = document.getElementById('codeEditor');
+        const minimap = document.getElementById('editorMinimap');
+        const content = editor.value;
+        
+        // Create a simplified minimap view
+        const lines = content.split('\n').slice(0, 20); // Show first 20 lines
+        minimap.innerHTML = lines.map(line => 
+            `<div style="height: 2px; background: ${line.trim() ? 'rgba(255,255,255,0.3)' : 'transparent'}; margin: 1px 0;"></div>`
+        ).join('');
     }
 }
 

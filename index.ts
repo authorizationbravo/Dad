@@ -222,6 +222,94 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// File system API endpoints
+app.get('/api/files', (req, res) => {
+  // Return the project file structure
+  const fileStructure = {
+    'src': {
+      type: 'folder',
+      children: {
+        'components': {
+          type: 'folder',
+          children: {
+            'BillCard.tsx': { type: 'file', size: '2.1 KB', modified: '2024-01-15' },
+            'SearchBar.tsx': { type: 'file', size: '1.8 KB', modified: '2024-01-14' }
+          }
+        },
+        'utils': {
+          type: 'folder',
+          children: {
+            'api.ts': { type: 'file', size: '3.2 KB', modified: '2024-01-15' },
+            'helpers.ts': { type: 'file', size: '1.5 KB', modified: '2024-01-13' }
+          }
+        },
+        'main.tsx': { type: 'file', size: '4.7 KB', modified: '2024-01-15' }
+      }
+    },
+    'public': {
+      type: 'folder',
+      children: {
+        'index.html': { type: 'file', size: '2.3 KB', modified: '2024-01-15' },
+        'styles.css': { type: 'file', size: '8.1 KB', modified: '2024-01-15' }
+      }
+    },
+    'index.ts': { type: 'file', size: '12.4 KB', modified: '2024-01-15' },
+    'package.json': { type: 'file', size: '1.2 KB', modified: '2024-01-12' },
+    'README.md': { type: 'file', size: '3.8 KB', modified: '2024-01-10' }
+  };
+  res.json(fileStructure);
+});
+
+app.get('/api/files/:path(*)', (req, res) => {
+  const filePath = req.params.path;
+  // Simulate file content based on path
+  let content = '';
+  
+  if (filePath.endsWith('.ts') || filePath.endsWith('.tsx')) {
+    content = `// ${filePath}\nimport React from 'react';\n\nexport default function Component() {\n  return (\n    <div>\n      <h1>Hello from ${filePath}</h1>\n    </div>\n  );\n}`;
+  } else if (filePath.endsWith('.css')) {
+    content = `/* ${filePath} */\n.container {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n}\n\n.title {\n  color: #333;\n  font-size: 2rem;\n}`;
+  } else if (filePath.endsWith('.html')) {
+    content = `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>LegisAI</title>\n</head>\n<body>\n  <div id="root"></div>\n</body>\n</html>`;
+  } else if (filePath.endsWith('.json')) {
+    content = `{\n  "name": "legis-ai",\n  "version": "1.0.0",\n  "description": "AI-powered legislative knowledge base"\n}`;
+  } else if (filePath.endsWith('.md')) {
+    content = `# ${filePath}\n\nThis is a markdown file for the LegisAI project.\n\n## Features\n\n- AI-powered analysis\n- Modern UI\n- Real-time updates`;
+  }
+  
+  res.json({ content, path: filePath });
+});
+
+app.post('/api/files/:path(*)', (req, res) => {
+  const filePath = req.params.path;
+  const { content } = req.body;
+  
+  // In a real implementation, this would save the file
+  console.log(`Saving file ${filePath} with ${content?.length || 0} characters`);
+  
+  res.json({ success: true, message: `File ${filePath} saved successfully` });
+});
+
+// Terminal command execution endpoint
+app.post('/api/terminal', (req, res) => {
+  const { command } = req.body;
+  
+  // Simulate command execution
+  let output = '';
+  
+  if (command.startsWith('npm install')) {
+    output = 'added 67 packages, and audited 81 packages in 3s\n\n19 packages are looking for funding';
+  } else if (command.startsWith('git status')) {
+    output = 'On branch main\nYour branch is up to date with \'origin/main\'.\n\nChanges not staged for commit:\n  modified:   index.ts';
+  } else if (command === 'ls') {
+    output = 'index.ts  package.json  public/  src/  README.md';
+  } else {
+    output = `Command executed: ${command}`;
+  }
+  
+  res.json({ output, command });
+});
+
 // Serve the original legislative app as preview
 app.get('/api/preview', (req, res) => {
   res.send(`

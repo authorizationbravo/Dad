@@ -137,34 +137,157 @@
                 </div>
             </div>
 
-            <!-- Center Panel - Assistant/Editor -->
-            <div class="panel panel-center" id="assistantPanel">
+            <!-- Center Panel - Tabbed Interface -->
+            <div class="panel panel-center" id="centerPanel">
                 <div class="panel-header">
-                    <h3>AI Assistant</h3>
+                    <div class="tabs-container">
+                        <div class="tab active" data-tab="editor" id="editorTab">
+                            <i class="fas fa-code"></i>
+                            <span>Editor</span>
+                            <button class="tab-close" onclick="ideApp.closeTab('editor')">×</button>
+                        </div>
+                        <div class="tab" data-tab="assistant" id="assistantTab">
+                            <i class="fas fa-robot"></i>
+                            <span>AI Assistant</span>
+                        </div>
+                        <div class="tab" data-tab="terminal" id="terminalTab">
+                            <i class="fas fa-terminal"></i>
+                            <span>Terminal</span>
+                        </div>
+                        <div class="tab" data-tab="git" id="gitTab">
+                            <i class="fab fa-git-alt"></i>
+                            <span>Git</span>
+                        </div>
+                    </div>
                     <div class="panel-actions">
-                        <button class="btn-icon" id="clearChatBtn" title="Clear Chat">
-                            <i class="fas fa-trash"></i>
+                        <button class="btn-icon" id="saveFileBtn" title="Save (Ctrl+S)">
+                            <i class="fas fa-save"></i>
+                        </button>
+                        <button class="btn-icon" id="formatCodeBtn" title="Format Code">
+                            <i class="fas fa-magic"></i>
+                        </button>
+                        <button class="btn-icon" id="searchBtn" title="Search (Ctrl+F)">
+                            <i class="fas fa-search"></i>
                         </button>
                     </div>
                 </div>
                 <div class="panel-content">
-                    <div class="chat-container">
-                        <div class="chat-messages" id="chatMessages">
-                            <div class="message assistant-message">
-                                <div class="message-avatar">
-                                    <i class="fas fa-robot"></i>
+                    <!-- Code Editor Tab -->
+                    <div class="tab-content active" id="editor-content">
+                        <div class="editor-container">
+                            <div class="editor-sidebar">
+                                <div class="editor-breadcrumb" id="editorBreadcrumb">
+                                    <span>No file selected</span>
                                 </div>
-                                <div class="message-content">
-                                    <p>Hello! I'm your AI assistant for legislative analysis. How can I help you today?</p>
+                                <div class="editor-minimap" id="editorMinimap"></div>
+                            </div>
+                            <div class="editor-main">
+                                <textarea id="codeEditor" placeholder="Select a file to start editing..."></textarea>
+                                <div class="editor-status-bar">
+                                    <span id="editorPosition">Ln 1, Col 1</span>
+                                    <span id="editorLanguage">Plain Text</span>
+                                    <span id="editorEncoding">UTF-8</span>
+                                    <span id="editorIndentation">Spaces: 2</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="chat-input-container">
-                            <div class="chat-input-wrapper">
-                                <input type="text" id="chatInput" placeholder="Ask about legislation, code, or anything else...">
-                                <button id="sendBtn">
-                                    <i class="fas fa-paper-plane"></i>
-                                </button>
+                    </div>
+
+                    <!-- AI Assistant Tab -->
+                    <div class="tab-content" id="assistant-content">
+                        <div class="chat-container">
+                            <div class="chat-messages" id="chatMessages">
+                                <div class="message assistant-message">
+                                    <div class="message-avatar">
+                                        <i class="fas fa-robot"></i>
+                                    </div>
+                                    <div class="message-content">
+                                        <p>Hello! I'm your AI assistant for legislative analysis. How can I help you today?</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="chat-input-container">
+                                <div class="chat-input-wrapper">
+                                    <input type="text" id="chatInput" placeholder="Ask about legislation, code, or anything else...">
+                                    <button id="sendBtn">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Terminal Tab -->
+                    <div class="tab-content" id="terminal-content">
+                        <div class="terminal-container">
+                            <div class="terminal-header">
+                                <div class="terminal-tabs">
+                                    <div class="terminal-tab active">
+                                        <span>bash</span>
+                                        <button class="terminal-tab-close">×</button>
+                                    </div>
+                                    <button class="btn-icon" id="newTerminalBtn" title="New Terminal">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="terminal-output" id="terminalOutput">
+                                <div class="terminal-line">
+                                    <span class="terminal-prompt">user@legis-ai:~$ </span>
+                                    <span class="terminal-cursor">_</span>
+                                </div>
+                            </div>
+                            <div class="terminal-input-container">
+                                <span class="terminal-prompt">user@legis-ai:~$ </span>
+                                <input type="text" id="terminalInput" class="terminal-input" autocomplete="off">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Git Tab -->
+                    <div class="tab-content" id="git-content">
+                        <div class="git-container">
+                            <div class="git-section">
+                                <h4>Repository Status</h4>
+                                <div class="git-status" id="gitStatus">
+                                    <div class="git-branch">
+                                        <i class="fab fa-git-alt"></i>
+                                        <span>main</span>
+                                        <button class="btn btn-sm">Switch Branch</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="git-section">
+                                <h4>Changes</h4>
+                                <div class="git-changes" id="gitChanges">
+                                    <div class="git-file modified">
+                                        <i class="fas fa-file-code"></i>
+                                        <span>index.ts</span>
+                                        <span class="git-status-badge modified">M</span>
+                                    </div>
+                                    <div class="git-file added">
+                                        <i class="fas fa-file"></i>
+                                        <span>new-feature.js</span>
+                                        <span class="git-status-badge added">A</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="git-section">
+                                <h4>Commit</h4>
+                                <textarea id="commitMessage" placeholder="Commit message..."></textarea>
+                                <div class="git-actions">
+                                    <button class="btn btn-primary" id="commitBtn">
+                                        <i class="fas fa-check"></i> Commit
+                                    </button>
+                                    <button class="btn btn-secondary" id="pushBtn">
+                                        <i class="fas fa-upload"></i> Push
+                                    </button>
+                                    <button class="btn btn-secondary" id="pullBtn">
+                                        <i class="fas fa-download"></i> Pull
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
