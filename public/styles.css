@@ -277,6 +277,17 @@ html, body {
     line-height: 1.5;
 }
 
+.provider-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 8px;
+    margin-left: 8px;
+    font-weight: 500;
+}
+
 .chat-input-container {
     padding: 20px;
     border-top: 1px solid #3e3e42;

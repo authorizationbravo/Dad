@@ -2,6 +2,7 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fetch from 'node-fetch';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -80,6 +81,130 @@ app.get('/api/bills/:id', (req, res) => {
   }
   res.json(bill);
 });
+
+// AI Chat endpoint
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { message, context = '' } = req.body;
+    
+    // Check which AI provider is configured
+    const openaiKey = process.env.OPENAI_API_KEY;
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    const groqKey = process.env.GROQ_API_KEY;
+    
+    let aiResponse = '';
+    
+    if (openaiKey) {
+      aiResponse = await callOpenAI(message, context, openaiKey);
+    } else if (anthropicKey) {
+      aiResponse = await callAnthropic(message, context, anthropicKey);
+    } else if (groqKey) {
+      aiResponse = await callGroq(message, context, groqKey);
+    } else {
+      return res.json({ 
+        response: "Please add your AI API key (OPENAI_API_KEY, ANTHROPIC_API_KEY, or GROQ_API_KEY) to Secrets to enable AI functionality.",
+        provider: "none"
+      });
+    }
+    
+    res.json({ response: aiResponse, provider: getActiveProvider() });
+    
+  } catch (error) {
+    console.error('AI API Error:', error);
+    res.status(500).json({ 
+      error: 'Failed to get AI response',
+      message: error.message 
+    });
+  }
+});
+
+// AI provider functions
+async function callOpenAI(message, context, apiKey) {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `You are an AI assistant specializing in legislative analysis and legal interpretation. You help users understand bills, laws, and their implications. Context: ${context}`
+        },
+        {
+          role: 'user',
+          content: message
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.7,
+    }),
+  });
+  
+  const data = await response.json();
+  return data.choices[0].message.content;
+}
+
+async function callAnthropic(message, context, apiKey) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'Content-Type': 'application/json',
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 1000,
+      messages: [
+        {
+          role: 'user',
+          content: `You are an AI assistant specializing in legislative analysis. Context: ${context}\n\nUser: ${message}`
+        }
+      ],
+    }),
+  });
+  
+  const data = await response.json();
+  return data.content[0].text;
+}
+
+async function callGroq(message, context, apiKey) {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'llama3-8b-8192',
+      messages: [
+        {
+          role: 'system',
+          content: `You are an AI assistant specializing in legislative analysis. Context: ${context}`
+        },
+        {
+          role: 'user',
+          content: message
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.7,
+    }),
+  });
+  
+  const data = await response.json();
+  return data.choices[0].message.content;
+}
+
+function getActiveProvider() {
+  if (process.env.OPENAI_API_KEY) return 'OpenAI GPT-4';
+  if (process.env.ANTHROPIC_API_KEY) return 'Anthropic Claude';
+  if (process.env.GROQ_API_KEY) return 'Groq Llama';
+  return 'none';
+}
 
 // Serve the main page
 // Serve the IDE interface

@@ -246,17 +246,34 @@ class LegislativeIDE {
         this.chatHistory.push({ sender, content, timestamp: new Date() });
     }
 
-    generateAIResponse(userMessage) {
-        const responses = [
-            "I can help you analyze legislative bills and their implications. What specific aspect would you like to explore?",
-            "That's an interesting question about legislation. Let me break down the key components for you.",
-            "Based on the legislative data, here's what I can tell you about that topic.",
-            "I'd be happy to help you understand the legal implications of that. Here are the main points to consider.",
-            "Let me analyze that for you from a legislative perspective."
-        ];
-        
-        const response = responses[Math.floor(Math.random() * responses.length)];
-        this.addChatMessage(response, 'assistant');
+    async generateAIResponse(userMessage) {
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: userMessage,
+                    context: 'Legislative Knowledge Base - AI-powered legal analysis tool'
+                }),
+            });
+
+            const data = await response.json();
+            
+            if (data.error) {
+                this.addChatMessage(`Error: ${data.error}`, 'assistant');
+                return;
+            }
+            
+            // Add provider indicator
+            const providerBadge = data.provider !== 'none' ? ` <span class="provider-badge">${data.provider}</span>` : '';
+            this.addChatMessage(data.response + providerBadge, 'assistant');
+            
+        } catch (error) {
+            console.error('Chat error:', error);
+            this.addChatMessage('Sorry, I encountered an error. Please try again.', 'assistant');
+        }
     }
 
     clearChat() {
