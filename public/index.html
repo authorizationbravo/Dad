@@ -4,65 +4,168 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Legislative Knowledge Base</title>
+    <title>LegisAI IDE</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="app">
-        <header class="header">
-            <div class="container">
+    <div class="ide-container">
+        <!-- Header -->
+        <header class="ide-header">
+            <div class="header-left">
                 <div class="logo">
                     <i class="fas fa-balance-scale"></i>
-                    <h1>LegisAI</h1>
+                    <span>LegisAI IDE</span>
                 </div>
-                <nav class="nav">
-                    <a href="#" class="nav-link active">Bills</a>
-                    <a href="#" class="nav-link">Analytics</a>
-                    <a href="#" class="nav-link">About</a>
-                </nav>
+            </div>
+            <div class="header-center">
+                <button class="run-btn" id="runBtn">
+                    <i class="fas fa-play"></i>
+                    Run
+                </button>
+            </div>
+            <div class="header-right">
+                <button class="btn-icon" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <button class="btn-icon" title="Terminal">
+                    <i class="fas fa-terminal"></i>
+                </button>
             </div>
         </header>
 
-        <main class="main">
-            <div class="container">
-                <div class="hero">
-                    <h2>AI-Interpreted Legislative Knowledge Base</h2>
-                    <p>Understand complex legislation through AI-powered analysis and interpretation</p>
-                </div>
-
-                <div class="search-section">
-                    <div class="search-bar">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="searchInput" placeholder="Search bills, topics, or keywords...">
-                    </div>
-                    <div class="filter-tags" id="filterTags">
-                        <span class="tag active" data-tag="">All</span>
-                        <span class="tag" data-tag="environment">Environment</span>
-                        <span class="tag" data-tag="healthcare">Healthcare</span>
-                        <span class="tag" data-tag="technology">Technology</span>
-                        <span class="tag" data-tag="economy">Economy</span>
+        <!-- Main IDE Content -->
+        <div class="ide-body">
+            <!-- Left Panel - File Explorer -->
+            <div class="panel panel-left" id="filePanel">
+                <div class="panel-header">
+                    <h3>Explorer</h3>
+                    <div class="panel-actions">
+                        <button class="btn-icon" id="newFileBtn" title="New File">
+                            <i class="fas fa-file-plus"></i>
+                        </button>
+                        <button class="btn-icon" id="newFolderBtn" title="New Folder">
+                            <i class="fas fa-folder-plus"></i>
+                        </button>
                     </div>
                 </div>
-
-                <div class="bills-grid" id="billsGrid">
-                    <!-- Bills will be populated by JavaScript -->
+                <div class="panel-content">
+                    <div class="file-tree" id="fileTree">
+                        <!-- File tree will be populated by JavaScript -->
+                    </div>
                 </div>
             </div>
-        </main>
 
-        <!-- Bill Detail Modal -->
-        <div class="modal" id="billModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 id="modalTitle"></h3>
-                    <button class="close-btn" id="closeModal">
-                        <i class="fas fa-times"></i>
+            <!-- Center Panel - Assistant/Editor -->
+            <div class="panel panel-center" id="assistantPanel">
+                <div class="panel-header">
+                    <h3>AI Assistant</h3>
+                    <div class="panel-actions">
+                        <button class="btn-icon" id="clearChatBtn" title="Clear Chat">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <div class="chat-container">
+                        <div class="chat-messages" id="chatMessages">
+                            <div class="message assistant-message">
+                                <div class="message-avatar">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <div class="message-content">
+                                    <p>Hello! I'm your AI assistant for legislative analysis. How can I help you today?</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chat-input-container">
+                            <div class="chat-input-wrapper">
+                                <input type="text" id="chatInput" placeholder="Ask about legislation, code, or anything else...">
+                                <button id="sendBtn">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Preview -->
+            <div class="panel panel-right" id="previewPanel">
+                <div class="panel-header">
+                    <h3>Preview</h3>
+                    <div class="panel-actions">
+                        <button class="btn-icon" id="refreshPreviewBtn" title="Refresh">
+                            <i class="fas fa-refresh"></i>
+                        </button>
+                        <button class="btn-icon" id="openExternalBtn" title="Open in New Tab">
+                            <i class="fas fa-external-link-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <iframe id="previewFrame" src="/api/preview" frameborder="0"></iframe>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Panel - Console -->
+        <div class="console-panel" id="consolePanel">
+            <div class="console-header">
+                <h4>Console</h4>
+                <div class="console-actions">
+                    <button class="btn-icon" id="clearConsoleBtn" title="Clear Console">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="btn-icon" id="toggleConsoleBtn" title="Toggle Console">
+                        <i class="fas fa-chevron-down"></i>
                     </button>
                 </div>
-                <div class="modal-body" id="modalBody">
-                    <!-- Bill details will be populated here -->
+            </div>
+            <div class="console-content" id="consoleContent">
+                <div class="console-output" id="consoleOutput">
+                    <div class="console-line">
+                        <span class="console-timestamp">[10:30:15]</span>
+                        <span class="console-info">Server started on port 3000</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="newFileModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New File</h3>
+                <button class="close-btn" id="closeNewFileModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="newFileName" placeholder="filename.ext">
+                <div class="modal-actions">
+                    <button class="btn btn-primary" id="createFileBtn">Create</button>
+                    <button class="btn btn-secondary" id="cancelFileBtn">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="newFolderModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Folder</h3>
+                <button class="close-btn" id="closeNewFolderModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="newFolderName" placeholder="folder-name">
+                <div class="modal-actions">
+                    <button class="btn btn-primary" id="createFolderBtn">Create</button>
+                    <button class="btn btn-secondary" id="cancelFolderBtn">Cancel</button>
                 </div>
             </div>
         </div>

@@ -1,194 +1,339 @@
 
-class LegislativeKnowledgeBase {
+class LegislativeIDE {
     constructor() {
-        this.bills = [];
-        this.filteredBills = [];
-        this.currentFilter = '';
-        this.currentSearch = '';
+        this.fileSystem = {
+            'src': {
+                type: 'folder',
+                children: {
+                    'components': {
+                        type: 'folder',
+                        children: {
+                            'BillCard.js': { type: 'file', content: '// Bill Card Component' },
+                            'SearchBar.js': { type: 'file', content: '// Search Bar Component' }
+                        }
+                    },
+                    'utils': {
+                        type: 'folder',
+                        children: {
+                            'api.js': { type: 'file', content: '// API utilities' },
+                            'helpers.js': { type: 'file', content: '// Helper functions' }
+                        }
+                    },
+                    'main.js': { type: 'file', content: '// Main application file' }
+                }
+            },
+            'public': {
+                type: 'folder',
+                children: {
+                    'index.html': { type: 'file', content: '<!DOCTYPE html>...' },
+                    'styles.css': { type: 'file', content: '/* Main styles */' }
+                }
+            },
+            'README.md': { type: 'file', content: '# Legislative Knowledge Base' },
+            'package.json': { type: 'file', content: '{\n  "name": "legis-ai"\n}' }
+        };
+
+        this.chatHistory = [];
+        this.isConsoleCollapsed = false;
         
         this.init();
     }
 
-    async init() {
-        await this.loadBills();
+    init() {
+        this.renderFileTree();
         this.setupEventListeners();
-        this.renderBills();
-    }
-
-    async loadBills() {
-        try {
-            const response = await fetch('/api/bills');
-            this.bills = await response.json();
-            this.filteredBills = [...this.bills];
-        } catch (error) {
-            console.error('Error loading bills:', error);
-        }
+        this.updatePreview();
+        this.addConsoleMessage('Server started on port 3000', 'info');
     }
 
     setupEventListeners() {
-        // Search functionality
-        const searchInput = document.getElementById('searchInput');
-        searchInput.addEventListener('input', (e) => {
-            this.currentSearch = e.target.value;
-            this.filterBills();
-        });
-
-        // Tag filtering
-        const filterTags = document.querySelectorAll('.tag');
-        filterTags.forEach(tag => {
-            tag.addEventListener('click', (e) => {
-                // Remove active class from all tags
-                filterTags.forEach(t => t.classList.remove('active'));
-                // Add active class to clicked tag
-                e.target.classList.add('active');
-                
-                this.currentFilter = e.target.dataset.tag;
-                this.filterBills();
-            });
-        });
-
-        // Modal functionality
-        const modal = document.getElementById('billModal');
-        const closeModal = document.getElementById('closeModal');
+        // File management
+        document.getElementById('newFileBtn').addEventListener('click', () => this.showNewFileModal());
+        document.getElementById('newFolderBtn').addEventListener('click', () => this.showNewFolderModal());
         
-        closeModal.addEventListener('click', () => {
-            modal.style.display = 'none';
+        // Chat
+        document.getElementById('sendBtn').addEventListener('click', () => this.sendMessage());
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.sendMessage();
         });
+        document.getElementById('clearChatBtn').addEventListener('click', () => this.clearChat());
 
-        // Close modal when clicking outside
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
+        // Console
+        document.getElementById('clearConsoleBtn').addEventListener('click', () => this.clearConsole());
+        document.getElementById('toggleConsoleBtn').addEventListener('click', () => this.toggleConsole());
 
-        // ESC key to close modal
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                modal.style.display = 'none';
+        // Preview
+        document.getElementById('refreshPreviewBtn').addEventListener('click', () => this.refreshPreview());
+        document.getElementById('openExternalBtn').addEventListener('click', () => this.openExternal());
+
+        // Run button
+        document.getElementById('runBtn').addEventListener('click', () => this.runProject());
+
+        // Modal handlers
+        this.setupModalHandlers();
+    }
+
+    setupModalHandlers() {
+        // New File Modal
+        document.getElementById('closeNewFileModal').addEventListener('click', () => this.hideModal('newFileModal'));
+        document.getElementById('createFileBtn').addEventListener('click', () => this.createNewFile());
+        document.getElementById('cancelFileBtn').addEventListener('click', () => this.hideModal('newFileModal'));
+
+        // New Folder Modal
+        document.getElementById('closeNewFolderModal').addEventListener('click', () => this.hideModal('newFolderModal'));
+        document.getElementById('createFolderBtn').addEventListener('click', () => this.createNewFolder());
+        document.getElementById('cancelFolderBtn').addEventListener('click', () => this.hideModal('newFolderModal'));
+
+        // Close modals on outside click
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                this.hideModal(e.target.id);
             }
         });
     }
 
-    filterBills() {
-        this.filteredBills = this.bills.filter(bill => {
-            const matchesSearch = !this.currentSearch || 
-                bill.title.toLowerCase().includes(this.currentSearch.toLowerCase()) ||
-                bill.summary.toLowerCase().includes(this.currentSearch.toLowerCase()) ||
-                bill.aiInterpretation.toLowerCase().includes(this.currentSearch.toLowerCase());
-
-            const matchesFilter = !this.currentFilter || 
-                bill.tags.includes(this.currentFilter);
-
-            return matchesSearch && matchesFilter;
-        });
-
-        this.renderBills();
+    renderFileTree() {
+        const fileTree = document.getElementById('fileTree');
+        fileTree.innerHTML = this.renderFileSystemNode(this.fileSystem, '');
     }
 
-    renderBills() {
-        const grid = document.getElementById('billsGrid');
+    renderFileSystemNode(node, path) {
+        let html = '';
         
-        if (this.filteredBills.length === 0) {
-            grid.innerHTML = `
-                <div class="loading">
-                    <i class="fas fa-search"></i>
-                    No bills found matching your criteria
-                </div>
-            `;
-            return;
+        for (const [name, item] of Object.entries(node)) {
+            const fullPath = path ? `${path}/${name}` : name;
+            
+            if (item.type === 'folder') {
+                html += `
+                    <div class="folder-item" onclick="ideApp.toggleFolder('${fullPath}')">
+                        <i class="fas fa-chevron-right"></i>
+                        <i class="fas fa-folder"></i>
+                        <span>${name}</span>
+                    </div>
+                    <div class="folder-children" id="folder-${fullPath.replace(/[\/\s]/g, '-')}">
+                        ${this.renderFileSystemNode(item.children, fullPath)}
+                    </div>
+                `;
+            } else {
+                const icon = this.getFileIcon(name);
+                html += `
+                    <div class="file-item" onclick="ideApp.openFile('${fullPath}')">
+                        <i class="${icon}"></i>
+                        <span>${name}</span>
+                    </div>
+                `;
+            }
         }
+        
+        return html;
+    }
 
-        grid.innerHTML = this.filteredBills.map(bill => `
-            <div class="bill-card" onclick="app.showBillDetail(${bill.id})">
-                <div class="bill-header">
-                    <span class="bill-number">${bill.billNumber}</span>
-                    <span class="bill-status ${this.getStatusClass(bill.status)}">${bill.status}</span>
+    getFileIcon(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        const iconMap = {
+            'js': 'fab fa-js-square',
+            'html': 'fab fa-html5',
+            'css': 'fab fa-css3-alt',
+            'json': 'fas fa-file-code',
+            'md': 'fab fa-markdown',
+            'ts': 'fas fa-file-code',
+            'jsx': 'fab fa-react',
+            'tsx': 'fab fa-react'
+        };
+        return iconMap[ext] || 'fas fa-file';
+    }
+
+    toggleFolder(path) {
+        const folderId = `folder-${path.replace(/[\/\s]/g, '-')}`;
+        const folderElement = document.getElementById(folderId);
+        const folderItem = folderElement.previousElementSibling;
+        
+        if (folderElement.style.display === 'block') {
+            folderElement.style.display = 'none';
+            folderItem.classList.remove('expanded');
+        } else {
+            folderElement.style.display = 'block';
+            folderItem.classList.add('expanded');
+        }
+    }
+
+    openFile(path) {
+        // Remove active class from all file items
+        document.querySelectorAll('.file-item').forEach(item => item.classList.remove('active'));
+        
+        // Add active class to clicked file
+        event.target.closest('.file-item').classList.add('active');
+        
+        this.addConsoleMessage(`Opened file: ${path}`, 'info');
+        
+        // In a real IDE, this would open the file in an editor
+        this.addChatMessage(`I see you opened ${path}. How can I help you with this file?`, 'assistant');
+    }
+
+    showNewFileModal() {
+        document.getElementById('newFileModal').classList.add('show');
+        document.getElementById('newFileName').focus();
+    }
+
+    showNewFolderModal() {
+        document.getElementById('newFolderModal').classList.add('show');
+        document.getElementById('newFolderName').focus();
+    }
+
+    hideModal(modalId) {
+        document.getElementById(modalId).classList.remove('show');
+    }
+
+    createNewFile() {
+        const fileName = document.getElementById('newFileName').value.trim();
+        if (fileName) {
+            // Add to file system (simplified - would need proper path handling)
+            this.addConsoleMessage(`Created file: ${fileName}`, 'info');
+            this.hideModal('newFileModal');
+            document.getElementById('newFileName').value = '';
+            
+            // Re-render file tree
+            this.renderFileTree();
+        }
+    }
+
+    createNewFolder() {
+        const folderName = document.getElementById('newFolderName').value.trim();
+        if (folderName) {
+            this.addConsoleMessage(`Created folder: ${folderName}`, 'info');
+            this.hideModal('newFolderModal');
+            document.getElementById('newFolderName').value = '';
+            
+            // Re-render file tree
+            this.renderFileTree();
+        }
+    }
+
+    sendMessage() {
+        const input = document.getElementById('chatInput');
+        const message = input.value.trim();
+        
+        if (message) {
+            this.addChatMessage(message, 'user');
+            input.value = '';
+            
+            // Simulate AI response
+            setTimeout(() => {
+                this.generateAIResponse(message);
+            }, 1000);
+        }
+    }
+
+    addChatMessage(content, sender) {
+        const chatMessages = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}-message`;
+        
+        const avatar = sender === 'user' ? 'fas fa-user' : 'fas fa-robot';
+        
+        messageDiv.innerHTML = `
+            <div class="message-avatar">
+                <i class="${avatar}"></i>
+            </div>
+            <div class="message-content">
+                <p>${content}</p>
+            </div>
+        `;
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        this.chatHistory.push({ sender, content, timestamp: new Date() });
+    }
+
+    generateAIResponse(userMessage) {
+        const responses = [
+            "I can help you analyze legislative bills and their implications. What specific aspect would you like to explore?",
+            "That's an interesting question about legislation. Let me break down the key components for you.",
+            "Based on the legislative data, here's what I can tell you about that topic.",
+            "I'd be happy to help you understand the legal implications of that. Here are the main points to consider.",
+            "Let me analyze that for you from a legislative perspective."
+        ];
+        
+        const response = responses[Math.floor(Math.random() * responses.length)];
+        this.addChatMessage(response, 'assistant');
+    }
+
+    clearChat() {
+        document.getElementById('chatMessages').innerHTML = `
+            <div class="message assistant-message">
+                <div class="message-avatar">
+                    <i class="fas fa-robot"></i>
                 </div>
-                <h3 class="bill-title">${bill.title}</h3>
-                <p class="bill-summary">${this.truncateText(bill.summary, 120)}</p>
-                <div class="bill-tags">
-                    ${bill.tags.map(tag => `<span class="bill-tag">${tag}</span>`).join('')}
-                </div>
-                <div class="bill-meta">
-                    <span>Sponsor: ${bill.sponsor}</span>
-                    <span>${this.formatDate(bill.dateIntroduced)}</span>
+                <div class="message-content">
+                    <p>Hello! I'm your AI assistant for legislative analysis. How can I help you today?</p>
                 </div>
             </div>
-        `).join('');
+        `;
+        this.chatHistory = [];
     }
 
-    async showBillDetail(billId) {
-        try {
-            const response = await fetch(`/api/bills/${billId}`);
-            const bill = await response.json();
-            
-            const modal = document.getElementById('billModal');
-            const modalTitle = document.getElementById('modalTitle');
-            const modalBody = document.getElementById('modalBody');
+    addConsoleMessage(message, type = 'info') {
+        const consoleOutput = document.getElementById('consoleOutput');
+        const timestamp = new Date().toLocaleTimeString();
+        
+        const lineDiv = document.createElement('div');
+        lineDiv.className = 'console-line';
+        lineDiv.innerHTML = `
+            <span class="console-timestamp">[${timestamp}]</span>
+            <span class="console-${type}">${message}</span>
+        `;
+        
+        consoleOutput.appendChild(lineDiv);
+        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
 
-            modalTitle.textContent = bill.title;
-            modalBody.innerHTML = `
-                <div class="detail-section">
-                    <div class="bill-header">
-                        <span class="bill-number">${bill.billNumber}</span>
-                        <span class="bill-status ${this.getStatusClass(bill.status)}">${bill.status}</span>
-                    </div>
-                </div>
+    clearConsole() {
+        document.getElementById('consoleOutput').innerHTML = '';
+    }
 
-                <div class="detail-section">
-                    <h4>Summary</h4>
-                    <p>${bill.summary}</p>
-                </div>
-
-                <div class="ai-interpretation">
-                    <h4><i class="fas fa-robot"></i> AI Interpretation</h4>
-                    <p>${bill.aiInterpretation}</p>
-                </div>
-
-                <div class="detail-section">
-                    <h4>Details</h4>
-                    <p><strong>Sponsor:</strong> ${bill.sponsor}</p>
-                    <p><strong>Date Introduced:</strong> ${this.formatDate(bill.dateIntroduced)}</p>
-                    <div class="bill-tags" style="margin-top: 1rem;">
-                        ${bill.tags.map(tag => `<span class="bill-tag">${tag}</span>`).join('')}
-                    </div>
-                </div>
-            `;
-
-            modal.style.display = 'block';
-        } catch (error) {
-            console.error('Error loading bill details:', error);
+    toggleConsole() {
+        const consolePanel = document.getElementById('consolePanel');
+        const toggleBtn = document.getElementById('toggleConsoleBtn');
+        const icon = toggleBtn.querySelector('i');
+        
+        if (this.isConsoleCollapsed) {
+            consolePanel.classList.remove('collapsed');
+            icon.className = 'fas fa-chevron-down';
+            this.isConsoleCollapsed = false;
+        } else {
+            consolePanel.classList.add('collapsed');
+            icon.className = 'fas fa-chevron-up';
+            this.isConsoleCollapsed = true;
         }
     }
 
-    getStatusClass(status) {
-        switch (status.toLowerCase()) {
-            case 'under review':
-                return 'status-review';
-            case 'passed senate':
-                return 'status-passed';
-            case 'in committee':
-                return 'status-committee';
-            default:
-                return 'status-review';
-        }
+    refreshPreview() {
+        const previewFrame = document.getElementById('previewFrame');
+        previewFrame.src = previewFrame.src;
+        this.addConsoleMessage('Preview refreshed', 'info');
     }
 
-    truncateText(text, maxLength) {
-        if (text.length <= maxLength) return text;
-        return text.substring(0, maxLength) + '...';
+    openExternal() {
+        window.open('/', '_blank');
+        this.addConsoleMessage('Opened in new tab', 'info');
     }
 
-    formatDate(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-        });
+    updatePreview() {
+        // The iframe will automatically load the preview
+        this.addConsoleMessage('Preview updated', 'info');
+    }
+
+    runProject() {
+        this.addConsoleMessage('Running project...', 'info');
+        this.addChatMessage('Project is now running! Check the preview panel to see your application.', 'assistant');
+        
+        setTimeout(() => {
+            this.addConsoleMessage('Build completed successfully', 'info');
+            this.refreshPreview();
+        }, 2000);
     }
 }
 
-// Initialize the application
-const app = new LegislativeKnowledgeBase();
+// Initialize the IDE
+const ideApp = new LegislativeIDE();
