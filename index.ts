@@ -260,8 +260,8 @@ app.get('/api/files', (req, res) => {
   res.json(fileStructure);
 });
 
-app.get('/api/files/:path(*)', (req, res) => {
-  const filePath = req.params.path;
+app.get('/api/files/*', (req, res) => {
+  const filePath = req.params[0] || '';
   // Simulate file content based on path
   let content = '';
   
@@ -280,8 +280,8 @@ app.get('/api/files/:path(*)', (req, res) => {
   res.json({ content, path: filePath });
 });
 
-app.post('/api/files/:path(*)', (req, res) => {
-  const filePath = req.params.path;
+app.post('/api/files/*', (req, res) => {
+  const filePath = req.params[0] || '';
   const { content } = req.body;
   
   // In a real implementation, this would save the file
