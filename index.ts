@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const port = 5000;
+const port = 3000;
 
 // Middleware
 app.use(express.json());
@@ -81,8 +81,8 @@ app.get('/api/bills/:id', (req, res) => {
   res.json(bill);
 });
 
-// Serve React app
-app.get('*', (req, res) => {
+// Serve the main page
+app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
