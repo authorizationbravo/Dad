@@ -1,7 +1,7 @@
 {
   "name": "nodejs-typescript",
   "version": "1.0.0",
-  "description": "",
+  "description": "A modern, sophisticated legislative knowledge base with AI-powered analysis capabilities and a full-featured IDE interface.",
   "main": "index.ts",
   "type": "module",
   "scripts": {
@@ -11,10 +11,19 @@
   "license": "ISC",
   "dependencies": {
     "express": "^5.1.0",
-    "node-fetch": "^3.3.1"
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
-    "@types/node": "^20.10.0",
-    "tsx": "^4.7.1"
-  }
+    "@types/node": "^24.1.0",
+    "tsx": "^4.20.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/authorizationbravo/Dad.git"
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/authorizationbravo/Dad/issues"
+  },
+  "homepage": "https://github.com/authorizationbravo/Dad#readme"
 }
